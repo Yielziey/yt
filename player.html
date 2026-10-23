@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+html,body{margin:0;width:100%;height:100%;background:#000;overflow:hidden}
+#player{position:absolute;top:50%;left:50%;width:100vw;height:56.25vw;min-height:100vh;min-width:177.78vh;transform:translate(-50%,-50%);border:0}
+</style>
+</head>
+<body>
+<iframe id="player"
+  title="Loading screen video"
+  allow="autoplay; encrypted-media; picture-in-picture"
+  referrerpolicy="strict-origin-when-cross-origin"
+  allowfullscreen></iframe>
+<script>
+const q = new URLSearchParams(location.search);
+const id = (q.get('v') || 'QLIBkLcaXSU').replace(/[^a-zA-Z0-9_-]/g, '');
+let vol = Math.max(0, Math.min(100, parseInt(q.get('vol') || '30', 10) || 30));
+const frame = document.getElementById('player');
+const ytOrigin = 'https://www.youtube.com';
+const pageOrigin = location.origin;
+
+frame.src = ytOrigin + '/embed/' + encodeURIComponent(id)
+  + '?autoplay=1&controls=0&disablekb=1&loop=1&playlist=' + encodeURIComponent(id)
+  + '&rel=0&playsinline=1&fs=0&enablejsapi=1&origin=' + encodeURIComponent(pageOrigin);
+
+function yt(func, args = []) {
+  if (!frame.contentWindow) return;
+  frame.contentWindow.postMessage(JSON.stringify({event:'command',func,args}), ytOrigin);
+}
+
+frame.addEventListener('load', () => {
+  setTimeout(() => {
+    yt('setVolume', [vol]);
+    yt('playVideo');
+  }, 250);
+});
+
+window.addEventListener('message', e => {
+  if (!e.data) return;
+  let data = e.data;
+  if (typeof data === 'string') {
+    try { data = JSON.parse(data); } catch (_) { return; }
+  }
+  if (!data || !data.cmd) return;
+  if (data.cmd === 'play') yt('playVideo');
+  if (data.cmd === 'pause') yt('pauseVideo');
+  if (data.cmd === 'mute') yt('mute');
+  if (data.cmd === 'unmute') yt('unMute');
+  if (data.cmd === 'volume') {
+    vol = Math.max(0, Math.min(100, Number(data.value) || 0));
+    yt('setVolume', [vol]);
+  }
+});
+</script>
+</body>
+</html>
